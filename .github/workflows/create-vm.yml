@@ -79,10 +79,11 @@ jobs:
           fi
 
       - name: Send Discord Notification
-        if: always()
+        if: false
         uses: sarisia/actions-status-discord@v1.15.4
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          ack_no_webhook: true
           title: "OCI VM Status: ${{ steps.create_vm.outcome }}"
           status: ${{ steps.create_vm.outcome }}
           color: ${{ steps.create_vm.outcome == 'success' && '0x28a745' || '0xdc3545' }}
