@@ -78,12 +78,12 @@ This is the most detailed step. You need to gather **11 pieces of information** 
     * If you still can not find the image, check this website and choose your image and copy ocid mentioned according to region. <https://docs.oracle.com/en-us/iaas/images/>
     * set this `IMAGE_ID` in your action env.
 4.  **OCPUs and RAM**
-    * The default settings in this action is to provision instance with 2 OCPUs and 12 GB memory.
-    * you can change this in action line 59 `--shape-config '{"ocpus":2,"memoryInGBs":12}' \`
+    * The default settings in this action provision an instance with 2 OCPUs and 12 GB memory — the full Always Free A1 allowance since Oracle halved it (from 4/24) on June 15, 2026. The allowance is shared across **all** A1 instances in your tenancy.
+    * You can change this via the `OCPUS` and `MEMORY_GB` env vars at the top of the workflow (e.g. back to 4/24 on a Pay As You Go account).
 6. **Boot Volume and Name**
-    * The default settings in this action is to provision instance with `100`GB boot volume with name `coolify-vm`.
-    * you can change bootvolume in action line 65 `--boot-volume-size-in-gbs 100' \`
-    * you can change instance name in same command (action line 64) `--display-name "coolify-vm"`
+    * The default settings in this action provision a `150` GB boot volume named `coolify-vm`.
+    * The Always Free block storage limit is **200 GB total for the whole tenancy**, shared with every other boot volume in your account — if you already have another instance, its boot volume counts against this. Requesting more than what's left fails with `QuotaExceeded: bootVolumeQuota Service limit reached`.
+    * You can change these via the `BOOT_VOLUME_GB` and `DISPLAY_NAME` env vars at the top of the workflow.
    
 ### D. Your SSH Public Key
 
@@ -149,16 +149,12 @@ This will start the first run. From now on, the `schedule` will automatically ru
 
 ## 🚨 CRITICAL: What to Do on Success
 
-One day, you will get a **green "success"** notification in Discord. This means your VM has been created!
+When a run succeeds, the workflow **disables itself automatically** (it has `actions: write` permission for exactly this), so it will not try to create a second VM. You'll notice scheduled runs stop appearing in the Actions tab, and the run's step summary will show `success`.
 
-As soon as you see this, you **MUST** disable the workflow.
+The workflow also distinguishes error types on every attempt:
 
-1.  Go to the **"Actions"** tab in your repository.
-2.  Click on **"Try to Create OCI VM"** in the sidebar.
-3.  Click the **three-dot (...)** menu on the right.
-4.  Click **"Disable workflow"**.
-
-If you do not do this, the action will continue running every 10 minutes and will try to create *another* VM, which will just fill your logs with errors.
+* **`capacity`** (`Out of host capacity`) — expected on the free tier; the run stays green and quietly retries on the next schedule.
+* **`fatal`** (e.g. `QuotaExceeded`, `LimitExceeded`, `InvalidParameter`, auth errors) — retrying can never succeed, so the run **fails red** to get your attention. Check the step summary for the full OCI error and fix the configuration.
 
 Your VM will be provisioning in the OCI console. You can now log in using the SSH key you provided.
 
